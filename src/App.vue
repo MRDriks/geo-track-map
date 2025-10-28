@@ -2,6 +2,20 @@
   <div class="app">
     <div class="sidebar">
       <Panel header="Налаштування">
+        <!-- <div class="store-actions">
+          <Button
+            label="Зберегти в сховище"
+            severity="info"
+            @click="saveToLocalStorage"
+          />
+
+          <Button
+            label="Очистити кеш"
+            severity="danger"
+            @click="clearLocalStorage"
+          />
+        </div> -->
+
         <Vue3Dropzone
           v-model="files"
           ref="dropzone"
@@ -63,7 +77,7 @@
               <template #content>
                 <div
                   class="custom-marker"
-                  :class="{ active: activeMarkerIndex === index }"
+                  :class="{ active: activeMarkerIndex === index && activeMode === 'edit' }"
                 >
                   <div
                     class="custom-marker-label"
@@ -120,11 +134,7 @@
             <Button
               :label="activeMode === 'edit' ? 'Скасувати' : 'Режим редагування'"
               :severity="activeMode === 'edit' ? 'secondary' : 'warn'"
-              @click="
-                activeMode === 'edit'
-                  ? (activeMode = null)
-                  : (activeMode = 'edit')
-              "
+              @click="editModeToggle"
             />
 
             <Button
@@ -156,6 +166,9 @@ import Popover from "primevue/popover";
 
 const center = { lat: 50.450001, lng: 30.523333 };
 
+// const iconsFromStorage = JSON.parse(localStorage.getItem("icons")) || [];
+// const markersFromStorage = JSON.parse(localStorage.getItem("markers")) || [];
+
 const files = ref([]);
 const icons = ref([]);
 const slider = ref(0);
@@ -171,7 +184,7 @@ const mapOptions = computed(() => ({
 }));
 
 const handleMapClick = (event) => {
-  if (activeMode.value !== "add" || !selectedIcon.value) return;
+  if (activeMode.value !== "add" || selectedIcon.value === null) return;
 
   const { latLng } = event;
 
@@ -217,9 +230,9 @@ const markerLabelClick = (index) => {
 const markerClick = (index) => {
   activeMarkerIndex.value = index;
 
-  // if (activeMode.value === "edit") {
-  //   editMarker();
-  // }
+  if (activeMode.value === "edit") {
+    slider.value = markers.value[index].rotation;
+  }
 
   if (activeMode.value === "delete") {
     removeMarker();
@@ -251,6 +264,30 @@ const sliderOnChange = () => {
   if (activeMarkerIndex.value !== null) {
     markers.value[activeMarkerIndex.value].rotation = slider.value;
   }
+};
+
+// const saveToLocalStorage = () => {
+//   localStorage.setItem("icons", JSON.stringify(icons.value));
+//   localStorage.setItem("markers", JSON.stringify(markers.value));
+
+//   alert("Дані збережено в локальне сховище!");
+// };
+
+// const clearLocalStorage = () => {
+//   localStorage.removeItem("icons");
+//   localStorage.removeItem("markers");
+
+//   window.location.reload();
+// };
+
+const editModeToggle = () => {
+  if (activeMode.value === "edit") {
+    activeMode.value = null;
+    activeMarkerIndex.value = null;
+  } else {
+    activeMode.value = "edit";
+  }
+
 };
 </script>
 
@@ -297,5 +334,11 @@ const sliderOnChange = () => {
 
 .rotation-slider {
   width: 200px;
+}
+
+.store-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 </style>
