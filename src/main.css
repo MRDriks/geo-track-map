@@ -1,0 +1,48 @@
+:root {
+  font-family: 'Inter', sans-serif;
+}
+@supports (font-variation-settings: normal) {
+  :root {
+    font-family: 'Inter var', sans-serif;
+  }
+}
+html,
+body {
+  min-height: 100%;
+  font-family: 'Inter var', 'Inter', sans-serif;
+}
+.p-component,
+.p-component * {
+  font-family: 'Inter var', 'Inter', sans-serif;
+}
+
+.custom-marker {
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.custom-marker.active {
+  border: 1px solid crimson;
+}
+
+.custom-marker-label {
+  position: absolute;
+  top: 0;
+  left: -50%;
+  background: white;
+  border: 2px solid #888;
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #000;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  transform: translateY(-30px);
+}
+
+.custom-marker-icon {
+  width: 32px;
+  height: 32px;
+}
