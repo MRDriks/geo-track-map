@@ -16,11 +16,14 @@
           />
         </div> -->
 
-        <Vue3Dropzone
-          v-model="files"
-          ref="dropzone"
-          :showSelectButton="false"
-        />
+        <Vue3Dropzone v-model="files" ref="dropzone" :showSelectButton="false">
+          <template #title>
+            <h3 class="dropzone-title">Перетягніть файли сюди</h3>
+          </template>
+          <template #description>
+            <p class="dropzone-description">Перетягніть файли сюди або натисніть, щоб вибрати</p>
+          </template>
+        </Vue3Dropzone>
 
         <div class="save-icon">
           <Button
@@ -77,7 +80,10 @@
               <template #content>
                 <div
                   class="custom-marker"
-                  :class="{ active: activeMarkerIndex === index && activeMode === 'edit' }"
+                  :class="{
+                    active:
+                      activeMarkerIndex === index && activeMode === 'edit',
+                  }"
                 >
                   <div
                     class="custom-marker-label"
@@ -287,7 +293,6 @@ const editModeToggle = () => {
   } else {
     activeMode.value = "edit";
   }
-
 };
 </script>
 
@@ -340,5 +345,15 @@ const editModeToggle = () => {
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
+}
+
+.dropzone-title {
+  margin: 8px 0;
+}
+
+.dropzone-description {
+  margin: 0;
+  font-size: 12px;
+  color: #bebfc3;
 }
 </style>
