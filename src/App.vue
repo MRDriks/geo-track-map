@@ -2,26 +2,14 @@
   <div class="app">
     <div class="sidebar">
       <Panel header="Налаштування">
-        <!-- <div class="store-actions">
-          <Button
-            label="Зберегти в сховище"
-            severity="info"
-            @click="saveToLocalStorage"
-          />
-
-          <Button
-            label="Очистити кеш"
-            severity="danger"
-            @click="clearLocalStorage"
-          />
-        </div> -->
-
         <Vue3Dropzone v-model="files" ref="dropzone" :showSelectButton="false">
           <template #title>
             <h3 class="dropzone-title">Перетягніть файли сюди</h3>
           </template>
           <template #description>
-            <p class="dropzone-description">Перетягніть файли сюди або натисніть, щоб вибрати</p>
+            <p class="dropzone-description">
+              Перетягніть файли сюди або натисніть, щоб вибрати
+            </p>
           </template>
         </Vue3Dropzone>
 
@@ -43,11 +31,7 @@
             class="!border-2"
             width="32"
             height="32"
-            @click="
-              selectedIcon === index
-                ? (selectedIcon = null)
-                : (selectedIcon = index)
-            "
+            @click="changeIcon(index)"
           >
             <img :src="icon.src" width="32" height="32" />
           </Button>
@@ -74,20 +58,19 @@
                 gmpDraggable: true,
                 position: marker,
               }"
-              @click="markerClick(index)"
               @dragend="onMarkerDragEnd($event, index)"
+              @click.left="handleMarkerLeftClick(index)"
+              @click.right="handleMarkerRightClick(index)"
             >
               <template #content>
                 <div
                   class="custom-marker"
-                  :class="{
-                    active:
-                      activeMarkerIndex === index && activeMode === 'edit',
-                  }"
+                  :class="{ selected: selectedMarkerIndex === index }"
                 >
                   <div
                     class="custom-marker-label"
-                    @click="markerLabelClick(index)"
+                    @dblclick="editMarker(index)"
+                    @mousedown="startRotation($event, index)"
                   >
                     {{ marker.label }}
                   </div>
@@ -101,26 +84,9 @@
                     height="32"
                   />
                 </div>
-                <div
-                  class="rotate-handle"
-                  @mousedown.stop.prevent="startRotation($event, index)"
-                ></div>
               </template>
             </AdvancedMarker>
           </GoogleMap>
-        </template>
-
-        <template #icons>
-          <div class="rotation-slider">
-            <Slider
-              v-if="activeMode === 'edit' && activeMarkerIndex !== null"
-              v-model="slider"
-              :step="1"
-              :min="0"
-              :max="360"
-              @update:modelValue="sliderOnChange"
-            />
-          </div>
         </template>
       </Panel>
 
@@ -135,12 +101,6 @@
                   ? (activeMode = null)
                   : (activeMode = 'add')
               "
-            />
-
-            <Button
-              :label="activeMode === 'edit' ? 'Скасувати' : 'Режим редагування'"
-              :severity="activeMode === 'edit' ? 'secondary' : 'warn'"
-              @click="editModeToggle"
             />
 
             <Button
@@ -167,57 +127,37 @@ import { GoogleMap, AdvancedMarker } from "vue3-google-map";
 
 import Panel from "primevue/panel";
 import Button from "primevue/button";
-import Slider from "primevue/slider";
 import Popover from "primevue/popover";
 
 const center = { lat: 50.450001, lng: 30.523333 };
 
-// const iconsFromStorage = JSON.parse(localStorage.getItem("icons")) || [];
-// const markersFromStorage = JSON.parse(localStorage.getItem("markers")) || [];
-
 const files = ref([]);
 const icons = ref([]);
-const slider = ref(0);
 const dropzone = ref();
 const markers = ref([]);
 const activeMode = ref(null);
+const markerCopy = ref(null);
 const selectedIcon = ref(null);
-const activeMarkerIndex = ref(null);
+const selectedMarkerIndex = ref(null);
 
 const mapOptions = computed(() => ({
   draggable: true,
   disableDoubleClickZoom: false,
 }));
 
-const handleMapClick = (event) => {
-  if (activeMode.value !== "add" || selectedIcon.value === null) return;
-
-  const { latLng } = event;
-
-  markers.value.push({
-    lat: latLng.lat(),
-    lng: latLng.lng(),
-    label: `Мітка ${markers.value.length + 1}`,
-    url:
-      selectedIcon.value !== null ? icons.value[selectedIcon.value].src : null,
-    rotation: 0,
-  });
-};
-
-const editMarker = () => {
+const editMarker = (index) => {
   const newLabel = prompt(
     "Введіть нову назву мітки:",
-    markers.value[activeMarkerIndex.value].label
+    markers.value[index].label
   );
   if (newLabel !== null) {
-    markers.value[activeMarkerIndex.value].label = newLabel;
+    markers.value[index].label = newLabel;
   }
 };
 
-const removeMarker = () => {
-  if (activeMarkerIndex.value !== null) {
-    markers.value.splice(activeMarkerIndex.value, 1);
-    activeMarkerIndex.value = null;
+const removeMarker = (index) => {
+  if (index !== null) {
+    markers.value.splice(index, 1);
   }
 };
 
@@ -225,30 +165,59 @@ const clearMarkers = () => {
   markers.value = [];
 };
 
-const markerLabelClick = (index) => {
-  activeMarkerIndex.value = index;
+const handleMapClick = (event) => {
+  if (activeMode.value !== "add" || selectedIcon.value === null) return;
 
-  if (activeMode.value === "edit") {
-    editMarker();
+  const { latLng } = event;
+
+  if (markerCopy.value) {
+    markers.value.push({
+      ...markerCopy.value,
+      lat: latLng.lat(),
+      lng: latLng.lng(),
+    });
+  } else {
+    markers.value.push({
+      lat: latLng.lat(),
+      lng: latLng.lng(),
+      label: `Мітка ${markers.value.length + 1}`,
+      url:
+        selectedIcon.value !== null
+          ? icons.value[selectedIcon.value].src
+          : null,
+      rotation: 0,
+    });
   }
 };
 
-const markerClick = (index) => {
-  activeMarkerIndex.value = index;
-
-  if (activeMode.value === "edit") {
-    slider.value = markers.value[index].rotation;
-  }
-
+const handleMarkerLeftClick = (index) => {
   if (activeMode.value === "delete") {
-    removeMarker();
+    removeMarker(index);
   }
+};
+
+const handleMarkerRightClick = (index) => {
+  selectedMarkerIndex.value = index;
+
+  markerCopy.value = { ...markers.value[index] };
+
+  setTimeout(() => {
+    selectedMarkerIndex.value = null;
+  }, 3000);
 };
 
 const saveIcon = () => {
   icons.value.push({ src: URL.createObjectURL(files.value[0].file) });
 
   dropzone.value.clearAll();
+};
+
+const changeIcon = (index) => {
+  selectedIcon.value === index
+    ? (selectedIcon.value = null)
+    : (selectedIcon.value = index);
+
+  markerCopy.value = null;
 };
 
 const onMarkerDragEnd = (event, index) => {
@@ -258,41 +227,34 @@ const onMarkerDragEnd = (event, index) => {
   markers.value[index].lng = pos.lng();
 };
 
-const rotateMarkers = () => {
-  markers.value.forEach((marker) => {
-    marker.rotate = Math.floor(Math.random() * 360);
-  });
+let rotating = null;
 
-  console.log("Markers rotated:", markers.value);
+const startRotation = (e, index) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  rotating = { index, startX: e.clientX, startY: e.clientY };
+
+  window.addEventListener("mousemove", rotateMarker);
+  window.addEventListener("mouseup", stopRotation);
 };
 
-const sliderOnChange = () => {
-  if (activeMarkerIndex.value !== null) {
-    markers.value[activeMarkerIndex.value].rotation = slider.value;
-  }
+const rotateMarker = (e) => {
+  if (!rotating) return;
+
+  const marker = markers.value[rotating.index];
+  const dx = e.clientX - rotating.startX;
+  const dy = e.clientY - rotating.startY;
+  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+  marker.rotation = (angle + 360) % 360;
 };
 
-// const saveToLocalStorage = () => {
-//   localStorage.setItem("icons", JSON.stringify(icons.value));
-//   localStorage.setItem("markers", JSON.stringify(markers.value));
+const stopRotation = () => {
+  rotating = null;
 
-//   alert("Дані збережено в локальне сховище!");
-// };
-
-// const clearLocalStorage = () => {
-//   localStorage.removeItem("icons");
-//   localStorage.removeItem("markers");
-
-//   window.location.reload();
-// };
-
-const editModeToggle = () => {
-  if (activeMode.value === "edit") {
-    activeMode.value = null;
-    activeMarkerIndex.value = null;
-  } else {
-    activeMode.value = "edit";
-  }
+  window.removeEventListener("mousemove", rotateMarker);
+  window.removeEventListener("mouseup", stopRotation);
 };
 </script>
 
@@ -335,16 +297,6 @@ const editModeToggle = () => {
 .marker-icons {
   display: flex;
   gap: 8px;
-}
-
-.rotation-slider {
-  width: 200px;
-}
-
-.store-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
 }
 
 .dropzone-title {

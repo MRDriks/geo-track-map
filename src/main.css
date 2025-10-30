@@ -17,11 +17,10 @@ body {
 }
 
 .custom-marker {
-  position: relative;
   border: 1px solid transparent;
 }
 
-.custom-marker.active {
+.custom-marker.selected {
   border: 1px solid crimson;
 }
 
